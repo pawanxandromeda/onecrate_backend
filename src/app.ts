@@ -11,7 +11,7 @@ dotenv.config();
 const app = express();
 
 // ✅ Allow only these frontend origins (for dev)
-const allowedOrigins = ['http://localhost:3000', 'http://localhost:8080'];
+const allowedOrigins = ['https://onecrate.vercel.app', 'http://localhost:8080'];
 
 // ✅ Simple CORS handling — no cookies involved
 app.use((req, res, next) => {
