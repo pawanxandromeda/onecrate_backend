@@ -35,43 +35,26 @@ export const createSubscription = async (data: SubscriptionData): Promise<ISubsc
   return subscription;
 };
 
-export const createRazorpaySubscription = async (subscription: ISubscription) => {
+export const createRazorpayOrder = async (subscription: ISubscription) => {
   try {
-    // Step 1: Create dynamic Razorpay plan
-    const plan = await razorpay.plans.create({
-      period: 'monthly',
-      interval: 1,
-      item: {
-        name: subscription.subscriptionName,
-        amount: subscription.grandTotal * 100, // Convert to paise
-        currency: 'INR',
-      },
-    });
-
-    // Step 2: Create the Razorpay subscription using that plan
-    const subscriptionOptions = {
-      plan_id: plan.id,
-      total_count: 12,
-      quantity: 1,
-      customer_notify: true, // or 1 as 1
+    const order = await razorpay.orders.create({
+      amount: subscription.grandTotal * 100, // in paise
+      currency: 'INR',
+      receipt: `order_rcptid_${subscription._id}`,
       notes: {
         subscriptionId: subscription._id.toString(),
       },
-    };
-
-    const razorpaySubscription = await razorpay.subscriptions.create(subscriptionOptions);
-
-    // Update DB with Razorpay subscription ID
-    await Subscription.findByIdAndUpdate(subscription._id, {
-      razorpaySubscriptionId: razorpaySubscription.id,
     });
 
-    return razorpaySubscription;
+    // Save order ID to DB (optional)
+    await Subscription.findByIdAndUpdate(subscription._id, {
+      razorpayOrderId: order.id,
+    });
+
+    return order;
   } catch (error: any) {
-    console.error('[Razorpay ERROR]', error);
-    const errorMessage =
-      error?.error?.description || error?.message || JSON.stringify(error);
-    throw new Error(`Failed to create Razorpay subscription: ${errorMessage}`);
+    console.error('[Razorpay Order ERROR]', error);
+    throw new Error('Failed to create Razorpay order');
   }
 };
 

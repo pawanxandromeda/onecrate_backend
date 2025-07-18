@@ -9,7 +9,7 @@ const router = Router();
 
 router.post('/subscriptions', verifyToken, createSubscriptionController);
 router.post('/subscriptions/verify-payment', verifyPaymentController);
-router.get('/subscriptions', verifyToken, getUserSubscriptionsController);
+router.get('/subscriptionsget', verifyToken, getUserSubscriptionsController);
 router.post('/pause', verifyToken, pauseAllSubscriptionsController);
 
 export default router;

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import {
-  createRazorpaySubscription,
+  createRazorpayOrder,
   createSubscription,
   getUserSubscriptions,
   pauseAllSubscriptions,
@@ -13,12 +13,12 @@ export const createSubscriptionController = async (req: Request, res: Response) 
     const userId = (req as any).userId; // Replace with typed middleware if available
     const subscriptionData = { ...req.body, userId };
     const subscription = await createSubscription(subscriptionData);
-    const razorpaySubscription = await createRazorpaySubscription(subscription);
+const razorpayOrder = await createRazorpayOrder(subscription);
 
     res.status(201).json({
       message: 'Subscription created successfully',
       subscription,
-      razorpaySubscription,
+      razorpayOrder,
       razorpayKeyId: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error) {
