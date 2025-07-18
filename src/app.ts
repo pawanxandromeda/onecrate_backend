@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/error';
 import userRoutes from './routes/user.routes';
 import subscriptionRoutes from './routes/subscriptionRoutes';
 import settingsRoutes from './routes/settings.routes';
+import recurringRoutes from './routes/recurring';
 dotenv.config();
 
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api', subscriptionRoutes);
 app.use('/api', settingsRoutes);
+app.use('/api', recurringRoutes);
 // ✅ Global error handler
 app.use(errorHandler);
 

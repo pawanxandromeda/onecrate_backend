@@ -1,57 +1,9 @@
 import { Request, Response } from 'express';
-import {
-  createRazorpaySubscription,
-  createSubscription,
-  getUserSubscriptions,
-  pauseAllSubscriptions,
-  verifyPayment,
-} from '../services/subscriptionService';
+import {getUserSubscriptions} from '../services/subscriptionService';
 import { AuthenticatedRequest } from '../types/express';
 import Subscription from '../models/subscription';
 import mongoose from 'mongoose';
 
-export const createSubscriptionController = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const userId = req.userId;
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized: user ID missing' });
-    }
-
-    const subscriptionData = { ...req.body, userId };
-    console.log('Received subscription data:', JSON.stringify(subscriptionData, null, 2));
-
-    const subscription = await createSubscription(subscriptionData);
-    const razorpaySubscription = await createRazorpaySubscription(subscription);
-
-    res.status(201).json({
-      message: 'Subscription created successfully',
-      subscription,
-      razorpaySubscription,
-      razorpayKeyId: process.env.RAZORPAY_KEY_ID,
-    });
-  } catch (error) {
-    const err = error as Error;
-    console.error('Create Subscription Error:', err);
-    res.status(500).json({ message: `Failed to create subscription: ${err.message}` });
-  }
-};
-
-export const verifyPaymentController = async (req: Request, res: Response) => {
-  try {
-    const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
-    const isValid = await verifyPayment(razorpay_payment_id, razorpay_subscription_id, razorpay_signature);
-
-    if (isValid) {
-      res.status(200).json({ message: 'Payment verified successfully' });
-    } else {
-      res.status(400).json({ message: 'Invalid payment signature' });
-    }
-  } catch (error) {
-    const err = error as Error;
-    console.error('Verify Payment Error:', err);
-    res.status(500).json({ message: `Payment verification failed: ${err.message}` });
-  }
-};
 
 export const getUserSubscriptionsController = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -69,21 +21,21 @@ export const getUserSubscriptionsController = async (req: AuthenticatedRequest, 
   }
 };
 
-export const pauseAllSubscriptionsController = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const userId = req.userId;
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized: user ID missing' });
-    }
+// export const pauseAllSubscriptionsController = async (req: AuthenticatedRequest, res: Response) => {
+//   try {
+//     const userId = req.userId;
+//     if (!userId) {
+//       return res.status(401).json({ message: 'Unauthorized: user ID missing' });
+//     }
 
-    const result = await pauseAllSubscriptions(userId);
-    res.status(200).json(result);
-  } catch (error) {
-    const err = error as Error;
-    console.error('Pause Subscriptions Error:', err);
-    res.status(500).json({ message: `Failed to pause subscriptions: ${err.message}` });
-  }
-};
+//     const result = await pauseAllSubscriptions(userId);
+//     res.status(200).json(result);
+//   } catch (error) {
+//     const err = error as Error;
+//     console.error('Pause Subscriptions Error:', err);
+//     res.status(500).json({ message: `Failed to pause subscriptions: ${err.message}` });
+//   }
+// };
 
 export const webhookController = async (req: Request, res: Response) => {
   try {
