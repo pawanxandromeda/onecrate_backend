@@ -1,6 +1,7 @@
 import Razorpay from 'razorpay';
 import Subscription, { ISubscription } from '../models/subscription';
 import crypto from 'crypto';
+import axios from 'axios';
 
 // Define Razorpay payload types
 interface RazorpayPlanItem {
@@ -82,20 +83,28 @@ export const createRazorpaySubscription = async (subscription: ISubscription) =>
       throw new Error('Razorpay requires a minimum amount of 1 INR');
     }
 
-    // Test API connectivity with a simple request
+    // Test API connectivity with axios
     try {
-      const testResponse = await razorpay.plans.all({ count: 1 });
-      console.log('Razorpay API connectivity test successful:', JSON.stringify(testResponse, null, 2));
-    } catch (testError: any) {
-      console.error('Razorpay API connectivity test failed:', {
-        message: testError.message,
-        stack: testError.stack,
-        response: testError.response ? JSON.stringify(testError.response.data, null, 2) : 'No response data',
+      const testResponse = await axios.get('https://api.razorpay.com/v1/plans', {
+        auth: {
+          username: process.env.RAZORPAY_KEY_ID!,
+          password: process.env.RAZORPAY_KEY_SECRET!,
+        },
+        params: { count: 1 },
+        timeout: 5000, // 5-second timeout
       });
-      throw new Error('Failed to connect to Razorpay API');
+      console.log('Razorpay API connectivity test (axios) successful:', JSON.stringify(testResponse.data, null, 2));
+    } catch (testError: any) {
+      console.error('Razorpay API connectivity test (axios) failed:', {
+        message: testError.message,
+        code: testError.code,
+        response: testError.response ? JSON.stringify(testError.response.data, null, 2) : 'No response data',
+        stack: testError.stack,
+      });
+      throw new Error(`Failed to connect to Razorpay API: ${testError.message || 'Unknown error'}`);
     }
 
-    // Define plan payload
+    // Create Razorpay plan dynamically
     const planPayload: RazorpayPlanCreateRequestBody = {
       period: 'monthly',
       interval: 1,
@@ -103,7 +112,7 @@ export const createRazorpaySubscription = async (subscription: ISubscription) =>
         name: subscription.subscriptionName.slice(0, 120), // Razorpay limits name to 120 characters
         amount: Math.round(subscription.grandTotal * 100), // Convert to paise, ensure integer
         currency: 'INR',
-        description: `Monthly subscription for ${subscription.subscriptionName.slice(0, 255)}`, // Limit description length
+        description: `Monthly subscription for ${subscription.subscriptionName.slice(0, 255)}`,
       },
     };
     console.log('Creating Razorpay plan with payload:', JSON.stringify(planPayload, null, 2));
@@ -112,7 +121,7 @@ export const createRazorpaySubscription = async (subscription: ISubscription) =>
     const subscriptionPlan = await razorpay.plans.create(planPayload);
     console.log('Razorpay plan created:', JSON.stringify(subscriptionPlan, null, 2));
 
-    // Define subscription payload
+    // Create subscription payload
     const subscriptionPayload: RazorpaySubscriptionCreateRequestBody = {
       plan_id: subscriptionPlan.id,
       total_count: 12, // 12 months subscription
@@ -130,7 +139,7 @@ export const createRazorpaySubscription = async (subscription: ISubscription) =>
 
     // Update subscription with Razorpay subscription ID
     await Subscription.findByIdAndUpdate(subscription._id, {
-      razorpaySubscriptionId: razorpaySubscription.id,
+      razorpaySubscriptionId: subscriptionPlan.id,
     });
 
     return razorpaySubscription;
