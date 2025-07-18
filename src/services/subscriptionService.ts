@@ -1,5 +1,6 @@
 import Razorpay from 'razorpay';
 import Subscription, { ISubscription } from '../models/subscription';
+import crypto from 'crypto';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -30,31 +31,43 @@ export const createSubscription = async (data: SubscriptionData): Promise<ISubsc
     ...data,
     paymentStatus: 'pending',
     autopay: true,
+    nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Initial next billing date (30 days from now)
   });
   await subscription.save();
   return subscription;
 };
 
-export const createRazorpayOrder = async (subscription: ISubscription) => {
+export const createRazorpaySubscription = async (subscription: ISubscription) => {
   try {
-    const order = await razorpay.orders.create({
-      amount: subscription.grandTotal * 100, // in paise
-      currency: 'INR',
-      receipt: `order_rcptid_${subscription._id}`,
+    const subscriptionPlan = await razorpay.plans.create({
+      period: 'monthly',
+      interval: 1,
+      item: {
+        name: subscription.subscriptionName,
+        amount: subscription.grandTotal * 100, // in paise
+        currency: 'INR',
+        description: `Monthly subscription for ${subscription.subscriptionName}`,
+      },
+    });
+
+    const razorpaySubscription = await razorpay.subscriptions.create({
+      plan_id: subscriptionPlan.id,
+      total_count: 12, // Example: 12 months subscription
+      quantity: 1,
+      start_at: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // Start after 30 days
       notes: {
         subscriptionId: subscription._id.toString(),
       },
     });
 
-    // Save order ID to DB (optional)
     await Subscription.findByIdAndUpdate(subscription._id, {
-      razorpayOrderId: order.id,
+      razorpaySubscriptionId: razorpaySubscription.id,
     });
 
-    return order;
+    return razorpaySubscription;
   } catch (error: any) {
-    console.error('[Razorpay Order ERROR]', error);
-    throw new Error('Failed to create Razorpay order');
+    console.error('[Razorpay Subscription ERROR]', error);
+    throw new Error('Failed to create Razorpay subscription');
   }
 };
 
@@ -63,7 +76,6 @@ export const verifyPayment = async (
   razorpay_subscription_id: string,
   razorpay_signature: string
 ): Promise<boolean> => {
-  const crypto = require('crypto');
   const generatedSignature = crypto
     .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
     .update(`${razorpay_payment_id}|${razorpay_subscription_id}`)

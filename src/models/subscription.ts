@@ -25,7 +25,8 @@ interface ISubscription extends Document {
   paymentId?: string;
   razorpaySubscriptionId?: string;
   autopay: boolean;
-  status: 'active' | 'paused' | 'cancelled'; // Added status field
+  status: 'active' | 'paused' | 'cancelled';
+  nextBillingDate?: Date; // Added for recurring subscriptions
 }
 
 const SubscriptionItemSchema = new Schema<ISubscriptionItem>({
@@ -52,7 +53,8 @@ const SubscriptionSchema = new Schema<ISubscription>({
   paymentId: { type: String },
   razorpaySubscriptionId: { type: String },
   autopay: { type: Boolean, default: true },
-  status: { type: String, enum: ['active', 'paused', 'cancelled'], default: 'active' }, // Added status field
+  status: { type: String, enum: ['active', 'paused', 'cancelled'], default: 'active' },
+  nextBillingDate: { type: Date }, // Added for tracking next billing
 });
 
 export default mongoose.model<ISubscription>('Subscription', SubscriptionSchema);
