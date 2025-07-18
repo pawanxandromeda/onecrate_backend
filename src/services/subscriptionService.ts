@@ -156,3 +156,4 @@ export const pauseAllSubscriptions = async (userId: string) => {
     throw new Error(`Failed to pause subscriptions: ${error.message}`);
   }
 };
+
