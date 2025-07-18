@@ -5,7 +5,7 @@ import {
   updateNotificationSettings,
   addOrUpdateDeliveryAddress
 } from '../services/settings.service';
-import { pauseAllSubscriptions } from '../services/subscriptionService';
+// import { pauseAllSubscriptions } from '../services/subscriptionService';
 
 export const getSettings = async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.userId;
