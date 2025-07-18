@@ -7,8 +7,8 @@ import {
   verifyPayment,
 } from '../services/subscriptionService';
 import { AuthenticatedRequest } from '../types/express';
-import Subscription from '../models/subscription'; // Import the Subscription model
-import mongoose from 'mongoose'; // Import mongoose for ObjectId
+import Subscription from '../models/subscription';
+import mongoose from 'mongoose';
 
 export const createSubscriptionController = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -18,6 +18,8 @@ export const createSubscriptionController = async (req: AuthenticatedRequest, re
     }
 
     const subscriptionData = { ...req.body, userId };
+    console.log('Received subscription data:', JSON.stringify(subscriptionData, null, 2));
+
     const subscription = await createSubscription(subscriptionData);
     const razorpaySubscription = await createRazorpaySubscription(subscription);
 
@@ -29,7 +31,8 @@ export const createSubscriptionController = async (req: AuthenticatedRequest, re
     });
   } catch (error) {
     const err = error as Error;
-    res.status(500).json({ message: err.message });
+    console.error('Create Subscription Error:', err);
+    res.status(500).json({ message: `Failed to create subscription: ${err.message}` });
   }
 };
 
@@ -45,7 +48,8 @@ export const verifyPaymentController = async (req: Request, res: Response) => {
     }
   } catch (error) {
     const err = error as Error;
-    res.status(500).json({ message: err.message });
+    console.error('Verify Payment Error:', err);
+    res.status(500).json({ message: `Payment verification failed: ${err.message}` });
   }
 };
 
@@ -59,7 +63,9 @@ export const getUserSubscriptionsController = async (req: AuthenticatedRequest, 
     const subscriptions = await getUserSubscriptions(userId);
     res.status(200).json({ message: 'Fetched subscriptions successfully', subscriptions });
   } catch (error) {
-    res.status(500).json({ message: (error as Error).message });
+    const err = error as Error;
+    console.error('Get Subscriptions Error:', err);
+    res.status(500).json({ message: `Failed to fetch subscriptions: ${err.message}` });
   }
 };
 
@@ -73,13 +79,17 @@ export const pauseAllSubscriptionsController = async (req: AuthenticatedRequest,
     const result = await pauseAllSubscriptions(userId);
     res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({ message: (error as Error).message });
+    const err = error as Error;
+    console.error('Pause Subscriptions Error:', err);
+    res.status(500).json({ message: `Failed to pause subscriptions: ${err.message}` });
   }
 };
 
 export const webhookController = async (req: Request, res: Response) => {
   try {
     const { event, payload } = req.body;
+    console.log('Webhook received:', JSON.stringify({ event, payload }, null, 2));
+
     if (event === 'subscription.charged') {
       const { subscription, payment } = payload;
       const subscriptionId = subscription.id;
@@ -106,7 +116,8 @@ export const webhookController = async (req: Request, res: Response) => {
     }
     res.status(200).json({ status: 'ok' });
   } catch (error) {
-    console.error('Webhook Error:', error);
-    res.status(500).json({ message: (error as Error).message });
+    const err = error as Error;
+    console.error('Webhook Error:', err);
+    res.status(500).json({ message: `Webhook processing failed: ${err.message}` });
   }
 };
