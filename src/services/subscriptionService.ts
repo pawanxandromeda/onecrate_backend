@@ -6,7 +6,7 @@ import crypto from 'crypto';
 interface RazorpayPlanItem {
   name: string;
   amount: number;
-  currency: 'INR'; // Add other currencies if needed
+  currency: 'INR';
   description?: string;
 }
 
@@ -78,16 +78,32 @@ export const createRazorpaySubscription = async (subscription: ISubscription) =>
     if (!subscription.subscriptionName) {
       throw new Error('Subscription name is required');
     }
+    if (subscription.grandTotal < 1) {
+      throw new Error('Razorpay requires a minimum amount of 1 INR');
+    }
 
-    // Define plan payload with explicit type
+    // Test API connectivity with a simple request
+    try {
+      const testResponse = await razorpay.plans.all({ count: 1 });
+      console.log('Razorpay API connectivity test successful:', JSON.stringify(testResponse, null, 2));
+    } catch (testError: any) {
+      console.error('Razorpay API connectivity test failed:', {
+        message: testError.message,
+        stack: testError.stack,
+        response: testError.response ? JSON.stringify(testError.response.data, null, 2) : 'No response data',
+      });
+      throw new Error('Failed to connect to Razorpay API');
+    }
+
+    // Define plan payload
     const planPayload: RazorpayPlanCreateRequestBody = {
-      period: 'monthly', // Explicitly typed as literal
+      period: 'monthly',
       interval: 1,
       item: {
-        name: subscription.subscriptionName,
+        name: subscription.subscriptionName.slice(0, 120), // Razorpay limits name to 120 characters
         amount: Math.round(subscription.grandTotal * 100), // Convert to paise, ensure integer
         currency: 'INR',
-        description: `Monthly subscription for ${subscription.subscriptionName}`,
+        description: `Monthly subscription for ${subscription.subscriptionName.slice(0, 255)}`, // Limit description length
       },
     };
     console.log('Creating Razorpay plan with payload:', JSON.stringify(planPayload, null, 2));
@@ -96,7 +112,7 @@ export const createRazorpaySubscription = async (subscription: ISubscription) =>
     const subscriptionPlan = await razorpay.plans.create(planPayload);
     console.log('Razorpay plan created:', JSON.stringify(subscriptionPlan, null, 2));
 
-    // Define subscription payload with explicit type
+    // Define subscription payload
     const subscriptionPayload: RazorpaySubscriptionCreateRequestBody = {
       plan_id: subscriptionPlan.id,
       total_count: 12, // 12 months subscription
@@ -120,11 +136,11 @@ export const createRazorpaySubscription = async (subscription: ISubscription) =>
     return razorpaySubscription;
   } catch (error: any) {
     console.error('[Razorpay Subscription ERROR]', {
-      message: error.message,
-      stack: error.stack,
+      message: error.message || 'Unknown error',
+      stack: error.stack || 'No stack trace',
       response: error.response ? JSON.stringify(error.response.data, null, 2) : 'No response data',
     });
-    throw new Error(`Failed to create Razorpay subscription: ${error.message}`);
+    throw new Error(`Failed to create Razorpay subscription: ${error.message || 'Unknown error'}`);
   }
 };
 
